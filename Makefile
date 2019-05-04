@@ -1,5 +1,5 @@
 NAME=go-basher
-OWNER=progrium
+OWNER=DABH
 BASH_DIR=.bash
 
 test:
@@ -9,7 +9,7 @@ build:
 	go install || true
 
 deps:
-	go get -u github.com/jteeuwen/go-bindata/...
+	@GO111MODULE=on go get github.com/kevinburke/go-bindata/...@v3.13.0
 
 bash:
 	# Don't run if you don't have to. Adds several megs to repo with every commit.
