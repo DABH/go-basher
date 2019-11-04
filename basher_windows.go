@@ -21,7 +21,7 @@ func exitStatus(err error) (int, error) {
 			// There is no platform independent way to retrieve
 			// the exit code, but the following will work on Unix
 			if status, ok := exiterr.Sys().(syscall.WaitStatus); ok {
-				return int(status.ExitStatus()), nil
+				return status.ExitStatus(), nil
 			}
 		}
 		return 0, err
@@ -240,17 +240,21 @@ func (c *Context) Run(command string, args []string) (int, error) {
 	cmd.Stdin = c.Stdin
 	cmd.Stdout = c.Stdout
 	cmd.Stderr = c.Stderr
-	if err2 := cmd.Start(); err2 != nil {
-		return 0, err2
+	if err := cmd.Start(); err != nil {
+		return 0, err
 	}
-
+	errChan := make(chan error, 1)
 	go func() {
 		for sig := range signals {
-			cmd.Process.Signal(sig)
-			if cmd.ProcessState != nil && !cmd.ProcessState.Exited() {
-				cmd.Process.Signal(sig)
+			err = cmd.Process.Signal(sig)
+			if err != nil {
+				errChan <- err
 			}
 		}
 	}()
-	return exitStatus(cmd.Wait())
+	go func() {
+		errChan <- cmd.Wait()
+	}()
+	err = <-errChan
+	return exitStatus(err)
 }
